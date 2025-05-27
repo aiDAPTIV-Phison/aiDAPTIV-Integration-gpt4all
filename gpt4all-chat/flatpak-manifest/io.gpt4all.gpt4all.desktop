@@ -7,3 +7,4 @@ Icon=io.gpt4all.gpt4all
 Type=Application
 Categories=Utility;Office;
 Keywords=GPT,Chat;AI
+StartupWMClass=io.gpt4all.chat
