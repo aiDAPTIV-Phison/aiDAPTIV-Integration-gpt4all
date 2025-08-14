@@ -511,16 +511,16 @@ void Download::handleDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
     const qint64 lastBytesReceived = ModelList::globalInstance()->dataByFilename(modelFilename, ModelList::BytesReceivedRole).toLongLong();
     const qint64 currentBytesReceived = tempFile->pos();
 
-    qint64 timeDifference = currentUpdate - lastUpdate;
-    qint64 bytesDifference = currentBytesReceived - lastBytesReceived;
-    qint64 speed = (bytesDifference / timeDifference) * 1000; // bytes per second
+    double timeSec = (currentUpdate - lastUpdate) / 1000.0; // seconds
+    double bytesDiff = static_cast<double>(currentBytesReceived - lastBytesReceived);
+    double speed = bytesDiff / timeSec; // bytes per second
     QString speedText;
     if (speed < 1024)
-        speedText = QString::number(static_cast<double>(speed), 'f', 2) + " B/s";
+        speedText = QString::number(speed, 'f', 2) + " B/s";
     else if (speed < 1024 * 1024)
-        speedText = QString::number(static_cast<double>(speed / 1024.0), 'f', 2) + " KB/s";
+        speedText = QString::number(speed / 1024.0, 'f', 2) + " KB/s";
     else
-        speedText = QString::number(static_cast<double>(speed / (1024.0 * 1024.0)), 'f', 2) + " MB/s";
+        speedText = QString::number(speed / (1024.0 * 1024.0), 'f', 2) + " MB/s";
 
     QVector<QPair<int, QVariant>> data {
         { ModelList::BytesReceivedRole, currentBytesReceived },
