@@ -65,6 +65,7 @@ static const QVariantMap basicDefaults {
     { "serverChat",               false },
     { "userDefaultModel",         "Application default" },
     { "suggestionMode",           QVariant::fromValue(SuggestionMode::LocalDocsOnly) },
+    { "showMessageTimestamps",    false },
     { "localdocs/chunkSize",      512 },
     { "localdocs/retrievalSize",  3 },
     { "localdocs/showReferences", true },
@@ -755,6 +756,16 @@ void MySettings::setNetworkUsageStatsActive(bool value)
         m_settings.setValue("network/usageStatsActive", value);
         emit networkUsageStatsActiveChanged();
     }
+}
+
+bool MySettings::showMessageTimestamps() const
+{
+    return getBasicSetting("showMessageTimestamps").toBool();
+}
+
+void MySettings::setShowMessageTimestamps(bool value)
+{
+    setBasicSetting("showMessageTimestamps", value);
 }
 
 QString MySettings::languageAndLocale() const

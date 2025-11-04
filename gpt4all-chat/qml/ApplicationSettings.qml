@@ -364,15 +364,36 @@ MySettingsTab {
             }
         }
         MySettingsLabel {
+            id: showTimestampsLabel
+            text: qsTr("Show Message Timestamps")
+            helpText: qsTr("Display the date and time when each message was sent.")
+            Layout.row: 8
+            Layout.column: 0
+        }
+        MyCheckBox {
+            id: showTimestampsBox
+            Layout.row: 8
+            Layout.column: 2
+            Layout.alignment: Qt.AlignRight
+            Component.onCompleted: { showTimestampsBox.checked = MySettings.showMessageTimestamps; }
+            Connections {
+                target: MySettings
+                function onShowMessageTimestampsChanged() { showTimestampsBox.checked = MySettings.showMessageTimestamps; }
+            }
+            onClicked: {
+                MySettings.showMessageTimestamps = showTimestampsBox.checked;
+            }
+        }
+        MySettingsLabel {
             id: modelPathLabel
             text: qsTr("Download Path")
             helpText: qsTr("Where to store local models and the LocalDocs database.")
-            Layout.row: 8
+            Layout.row: 9
             Layout.column: 0
         }
 
         RowLayout {
-            Layout.row: 8
+            Layout.row: 9
             Layout.column: 2
             Layout.alignment: Qt.AlignRight
             Layout.minimumWidth: 400
@@ -412,12 +433,12 @@ MySettingsTab {
             id: dataLakeLabel
             text: qsTr("Enable Datalake")
             helpText: qsTr("Send chats and feedback to the GPT4All Open-Source Datalake.")
-            Layout.row: 9
+            Layout.row: 10
             Layout.column: 0
         }
         MyCheckBox {
             id: dataLakeBox
-            Layout.row: 9
+            Layout.row: 10
             Layout.column: 2
             Layout.alignment: Qt.AlignRight
             Component.onCompleted: { dataLakeBox.checked = MySettings.networkIsActive; }
@@ -435,7 +456,7 @@ MySettingsTab {
         }
 
         ColumnLayout {
-            Layout.row: 10
+            Layout.row: 11
             Layout.column: 0
             Layout.columnSpan: 3
             Layout.fillWidth: true
@@ -458,7 +479,7 @@ MySettingsTab {
             id: nThreadsLabel
             text: qsTr("CPU Threads")
             helpText: qsTr("The number of CPU threads used for inference and embedding.")
-            Layout.row: 11
+            Layout.row: 12
             Layout.column: 0
         }
         MyTextField {
@@ -466,7 +487,7 @@ MySettingsTab {
             color: theme.textColor
             font.pixelSize: theme.fontSizeLarge
             Layout.alignment: Qt.AlignRight
-            Layout.row: 11
+            Layout.row: 12
             Layout.column: 2
             Layout.minimumWidth: 200
             Layout.maximumWidth: 200
@@ -490,12 +511,12 @@ MySettingsTab {
             id: trayLabel
             text: qsTr("Enable System Tray")
             helpText: qsTr("The application will minimize to the system tray when the window is closed.")
-            Layout.row: 13
+            Layout.row: 14
             Layout.column: 0
         }
         MyCheckBox {
             id: trayBox
-            Layout.row: 13
+            Layout.row: 14
             Layout.column: 2
             Layout.alignment: Qt.AlignRight
             checked: MySettings.systemTray
@@ -507,12 +528,12 @@ MySettingsTab {
             id: serverChatLabel
             text: qsTr("Enable Local API Server")
             helpText: qsTr("Expose an OpenAI-Compatible server to localhost. WARNING: Results in increased resource usage.")
-            Layout.row: 14
+            Layout.row: 15
             Layout.column: 0
         }
         MyCheckBox {
             id: serverChatBox
-            Layout.row: 14
+            Layout.row: 15
             Layout.column: 2
             Layout.alignment: Qt.AlignRight
             checked: MySettings.serverChat
@@ -524,7 +545,7 @@ MySettingsTab {
             id: serverPortLabel
             text: qsTr("API Server Port")
             helpText: qsTr("The port to use for the local server. Requires restart.")
-            Layout.row: 15
+            Layout.row: 16
             Layout.column: 0
         }
         MyTextField {
@@ -532,7 +553,7 @@ MySettingsTab {
             text: MySettings.networkPort
             color: theme.textColor
             font.pixelSize: theme.fontSizeLarge
-            Layout.row: 15
+            Layout.row: 16
             Layout.column: 2
             Layout.minimumWidth: 200
             Layout.maximumWidth: 200
@@ -577,12 +598,12 @@ MySettingsTab {
             id: updatesLabel
             text: qsTr("Check For Updates")
             helpText: qsTr("Manually check for an update to GPT4All.");
-            Layout.row: 16
+            Layout.row: 17
             Layout.column: 0
         }
 
         MySettingsButton {
-            Layout.row: 16
+            Layout.row: 17
             Layout.column: 2
             Layout.alignment: Qt.AlignRight
             text: qsTr("Updates");

@@ -97,6 +97,19 @@ GridLayout {
                 text: currentModelName()
                 color: theme.mutedTextColor
             }
+            Text {
+                visible: MySettings.showMessageTimestamps && timestamp > 0
+                font.pixelSize: theme.fontSizeSmall
+                text: {
+                    if (timestamp > 0) {
+                        var date = new Date(timestamp);
+                        return Qt.formatDateTime(date, "yyyy-MM-dd hh:mm:ss");
+                    }
+                    return "";
+                }
+                color: theme.mutedTextColor
+                opacity: 0.6
+            }
             RowLayout {
                 visible: isCurrentResponse && (content === "" && currentChat.responseInProgress)
                 Text {

@@ -14,6 +14,7 @@
 #include <QByteArray>
 #include <QClipboard>
 #include <QDataStream>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QIODevice>
@@ -189,6 +190,9 @@ class ChatItem : public QObject
     // thinking
     Q_PROPERTY(int     thinkingTime    MEMBER thinkingTime NOTIFY thinkingTimeChanged)
 
+    // timestamp
+    Q_PROPERTY(qint64  timestamp       MEMBER timestamp)
+
 public:
     enum class Type { System, Prompt, Response, Text, ToolCall, ToolResponse, Think };
 
@@ -225,12 +229,12 @@ public:
 
     ChatItem(QObject *parent, prompt_tag_t, const QString &value, const QList<PromptAttachment> &attachments = {})
         : ChatItem(parent)
-    { this->name = u"Prompt: "_s; this->value = value; this->promptAttachments = attachments; }
+    { this->name = u"Prompt: "_s; this->value = value; this->promptAttachments = attachments; this->timestamp = QDateTime::currentMSecsSinceEpoch(); }
 
 private:
     ChatItem(QObject *parent, response_tag_t, bool isCurrentResponse, const QString &value = {})
         : ChatItem(parent)
-    { this->name = u"Response: "_s; this->value = value; this->isCurrentResponse = isCurrentResponse; }
+    { this->name = u"Response: "_s; this->value = value; this->isCurrentResponse = isCurrentResponse; this->timestamp = QDateTime::currentMSecsSinceEpoch(); }
 
 public:
     // A new response, to be filled in
@@ -494,6 +498,9 @@ public:
 
     // thinking time in ms
     int     thinkingTime  = 0;
+
+    // timestamp in milliseconds since epoch
+    qint64  timestamp = 0;
 };
 
 class ChatModel : public QAbstractListModel

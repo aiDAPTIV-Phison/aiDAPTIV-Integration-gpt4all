@@ -145,6 +145,10 @@ void ChatItem::serialize(QDataStream &stream, int version)
         for (ChatItem *item :subItems)
             item->serializeSubItems(stream, version);
     }
+
+    if (version >= 13) {
+        stream << timestamp;
+    }
 }
 
 bool ChatItem::deserializeToolCall(QDataStream &stream, int version)
@@ -364,5 +368,10 @@ bool ChatItem::deserialize(QDataStream &stream, int version)
             subItems.push_back(c);
         }
     }
+
+    if (version >= 13) {
+        stream >> timestamp;
+    }
+
     return true;
 }

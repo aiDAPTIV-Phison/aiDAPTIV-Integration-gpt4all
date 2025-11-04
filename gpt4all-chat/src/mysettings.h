@@ -79,6 +79,7 @@ class MySettings : public QObject
     Q_PROPERTY(QStringList embeddingsDeviceList MEMBER m_embeddingsDeviceList CONSTANT)
     Q_PROPERTY(int networkPort READ networkPort WRITE setNetworkPort NOTIFY networkPortChanged)
     Q_PROPERTY(SuggestionMode suggestionMode READ suggestionMode WRITE setSuggestionMode NOTIFY suggestionModeChanged)
+    Q_PROPERTY(bool showMessageTimestamps READ showMessageTimestamps WRITE setShowMessageTimestamps NOTIFY showMessageTimestampsChanged)
     Q_PROPERTY(QStringList uiLanguages MEMBER m_uiLanguages CONSTANT)
 
 private:
@@ -218,6 +219,9 @@ public:
     int networkPort() const;
     void setNetworkPort(int value);
 
+    bool showMessageTimestamps() const;
+    void setShowMessageTimestamps(bool value);
+
 Q_SIGNALS:
     void nameChanged(const ModelInfo &info);
     void filenameChanged(const ModelInfo &info);
@@ -259,6 +263,7 @@ Q_SIGNALS:
     void attemptModelLoadChanged();
     void deviceChanged();
     void suggestionModeChanged();
+    void showMessageTimestampsChanged();
     void languageAndLocaleChanged();
 
 private:
