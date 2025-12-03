@@ -19,6 +19,7 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QGlobalStatic>
 #include <QIODevice> // IWYU pragma: keep
 #include <QJsonDocument>
@@ -30,6 +31,7 @@
 #include <QRegularExpression> // IWYU pragma: keep
 #include <QRegularExpressionMatch> // IWYU pragma: keep
 #include <QSet>
+#include <QStringConverter>
 #include <QStringView>
 #include <QTextStream>
 #include <QUrl>
@@ -869,17 +871,110 @@ std::string ChatLLM::applyJinjaTemplate(std::span<const MessageItem> items) cons
         return JinjaMessage(version, item).AsJson();
     };
 
+    // 輔助函數：讀取完整文檔內容
+    auto readFullDocumentContent = [](const QString &filePath) -> QString {
+        QFileInfo fileInfo(filePath);
+        QString suffix = fileInfo.suffix().toLower();
+        
+        // 對於簡單的文本文件，直接讀取
+        if (suffix == "txt" || suffix == "md" || suffix == "markdown" || 
+            suffix == "json" || suffix == "xml" || suffix == "html" || 
+            suffix == "csv" || suffix == "log" || suffix == "code" ||
+            suffix == "cpp" || suffix == "h" || suffix == "hpp" || 
+            suffix == "c" || suffix == "py" || suffix == "js" || 
+            suffix == "ts" || suffix == "java" || suffix == "go" ||
+            suffix == "rs" || suffix == "rb" || suffix == "php") {
+            QFile file(filePath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream stream(&file);
+                stream.setEncoding(QStringConverter::Utf8);
+                return stream.readAll();
+            }
+        }
+        
+        // 對於其他格式（PDF, DOCX等），返回空字符串
+        // 注意：完整解析 PDF/DOCX 需要特殊的庫，這裡只處理文本文件
+        return QString();
+    };
+
+    // 檢查最後一個 prompt 是否有 LocalDocs sources，如果有則添加到 system message 前面
+    // 同時需要創建一個不包含 sources 的 items 副本，避免 sources 被重複添加到 user prompt
+    std::vector<MessageItem> itemsWithoutSources;
+    itemsWithoutSources.reserve(items.size());
+    QString enhancedSystemMessage = systemMessage;
+    bool foundSources = false;
+    
+    if (!items.empty()) {
+        // 從後往前找最後一個 prompt
+        for (auto it = items.rbegin(); it != items.rend(); ++it) {
+            if (it->type() == MessageItem::Type::Prompt && !it->sources().isEmpty()) {
+                foundSources = true;
+                // 格式化 LocalDocs sources
+                QStringList localDocsParts;
+                localDocsParts << u"### Context from LocalDocs:\n"_s;
+                for (const auto &source : it->sources()) {
+                    localDocsParts << u"Collection: "_s << source.collection;
+                    
+                    // 嘗試讀取完整文檔內容
+                    QString fullContent = readFullDocumentContent(source.path);
+                    if (!fullContent.isEmpty()) {
+                        localDocsParts << u"\nFull Document Content:\n"_s << fullContent << u"\n\n"_s;
+                    } else {
+                        // 如果無法讀取完整內容，使用 chunk 片段
+                        localDocsParts << u"\nExcerpt: "_s << source.text << u"\n\n"_s;
+                    }
+                }
+                
+                // 將 LocalDocs 內容添加到 system message 前面
+                QString localDocsContent = localDocsParts.join(QString());
+                if (!enhancedSystemMessage.isEmpty()) {
+                    enhancedSystemMessage = localDocsContent + u"\n\n"_s + enhancedSystemMessage;
+                } else {
+                    enhancedSystemMessage = localDocsContent;
+                }
+                break; // 只處理最後一個有 sources 的 prompt
+            }
+        }
+        
+        // 創建不包含 sources 的 items 副本（避免 sources 被重複添加到 user prompt）
+        for (const auto &item : items) {
+            if (foundSources && item.type() == MessageItem::Type::Prompt && !item.sources().isEmpty()) {
+                // 創建一個沒有 sources 的 prompt item（因為已經加到 system message 了）
+                itemsWithoutSources.emplace_back(
+                    item.index().value_or(0),
+                    item.type(),
+                    item.content(),
+                    QList<ResultInfo>(),  // 空的 sources
+                    item.promptAttachments()
+                );
+            } else {
+                // 其他類型的 item 直接複製
+                itemsWithoutSources.push_back(item);
+            }
+        }
+    } else {
+        // 如果沒有 items，直接使用原始 items
+        itemsWithoutSources.assign(items.begin(), items.end());
+    }
+
     std::unique_ptr<MessageItem> systemItem;
-    bool useSystem = !isAllSpace(systemMessage);
+    bool useSystem = !isAllSpace(enhancedSystemMessage);
 
     json::array_t messages;
     messages.reserve(useSystem + items.size());
     if (useSystem) {
-        systemItem = std::make_unique<MessageItem>(MessageItem::system_tag, systemMessage.toUtf8());
+        systemItem = std::make_unique<MessageItem>(MessageItem::system_tag, enhancedSystemMessage.toUtf8());
         messages.emplace_back(makeMap(*systemItem));
     }
-    for (auto &item : items)
+    // 使用不包含 sources 的 items，避免 LocalDocs 內容被重複添加到 user prompt
+    for (auto &item : itemsWithoutSources)
         messages.emplace_back(makeMap(item));
+
+    // 輸出完整的 messages 用於調試
+    qDebug().noquote() << "=== Full Messages (before Jinja template) ===";
+    json messagesJson = messages;
+    qDebug().noquote() << QString::fromStdString(messagesJson.dump(2));
+    qDebug().noquote() << "=== End of Full Messages ===";
 
     json::array_t toolList;
     const int toolCount = ToolModel::globalInstance()->count();
@@ -899,7 +994,14 @@ std::string ChatLLM::applyJinjaTemplate(std::span<const MessageItem> items) cons
     try {
         auto tmpl = loadJinjaTemplate(chatTemplate.toStdString());
         auto context = minja::Context::make(minja::Value(std::move(params)), jinjaEnv());
-        return tmpl->render(context);
+        std::string rendered = tmpl->render(context);
+        
+        // 輸出完整的 prompt 用於調試
+        qDebug().noquote() << "=== Full Prompt (after Jinja template) ===";
+        qDebug().noquote() << QString::fromStdString(rendered);
+        qDebug().noquote() << "=== End of Full Prompt ===";
+        
+        return rendered;
     } catch (const std::runtime_error &e) {
         throw std::runtime_error(fmt::format("Failed to parse chat template: {}", e.what()));
     }
@@ -934,7 +1036,7 @@ auto ChatLLM::promptInternalChat(const QStringList &enabledCollections, const LL
 
         if (query) {
             auto &[promptIndex, queryStr] = *query;
-            const int retrievalSize = MySettings::globalInstance()->localDocsRetrievalSize();
+            const int retrievalSize = 1; // 寫死為 1，不再從設定讀取
             emit requestRetrieveFromDB(enabledCollections, queryStr, retrievalSize, &databaseResults); // blocks
             m_chatModel->updateSources(promptIndex, databaseResults);
             emit databaseResultsChanged(databaseResults);
@@ -1028,10 +1130,14 @@ auto ChatLLM::promptInternal(
     std::string_view                 conversation;
     if (auto *nonChat = std::get_if<std::string_view>(&prompt)) {
         conversation = *nonChat; // complete the string without a template
+        qDebug().noquote() << "=== Full Prompt (non-chat, string_view) ===";
+        qDebug().noquote() << QString::fromUtf8(conversation.data(), conversation.size());
+        qDebug().noquote() << "=== End of Full Prompt ===";
     } else {
         messageItems    = &std::get<std::span<const MessageItem>>(prompt);
         jinjaBuffer  = applyJinjaTemplate(*messageItems);
         conversation = jinjaBuffer;
+        // applyJinjaTemplate 內部已經輸出了完整的 prompt
     }
 
     // check for overlength last message

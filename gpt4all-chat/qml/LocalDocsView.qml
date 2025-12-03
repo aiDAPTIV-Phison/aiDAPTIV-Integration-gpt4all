@@ -364,6 +364,7 @@ Rectangle {
                         }
 
                         Rectangle {
+                            Layout.topMargin: 10  // 增加間距，讓分隔線位置更合適
                             Layout.fillWidth: true
                             height: 1
                             color: theme.dividerColor

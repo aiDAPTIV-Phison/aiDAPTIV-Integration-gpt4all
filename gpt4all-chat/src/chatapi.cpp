@@ -171,12 +171,20 @@ void ChatAPI::prompt(
     // the OpenAI tiktoken library or to implement our own tokenization function that matches precisely
     // the tokenization used by the OpenAI model we're calling. OpenAI has not introduced any means of
     // using the REST API to count tokens in a prompt.
+    // NOTE: Actually, max_tokens only limits the completion (response) tokens, not the prompt tokens,
+    // so it's safe to set it. The FIXME above seems to be based on a misunderstanding.
     auto root = makeJsonObject({
         { "model"_L1,       m_modelName     },
         { "stream"_L1,      true            },
         { "temperature"_L1, promptCtx.temp  },
         { "top_p"_L1,       promptCtx.top_p },
     });
+    
+    // 如果 n_predict 被設置（且不為 0），則添加 max_tokens 參數
+    // max_tokens 只限制回應的 token 數量，不影響 prompt，所以可以安全設置
+    if (promptCtx.n_predict > 0) {
+        root.insert("max_tokens"_L1, promptCtx.n_predict);
+    }
 
     // conversation history
     {

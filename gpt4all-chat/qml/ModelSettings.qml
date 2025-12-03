@@ -12,6 +12,24 @@ MySettingsTab {
         MySettings.restoreModelDefaults(root.currentModelInfo);
     }
     title: qsTr("Model")
+    
+    Component.onCompleted: {
+        // 當 Settings 頁面加載時，如果當前 chat 沒有模型加載，則加載默認模型
+        if (ChatListModel.currentChat && !ChatListModel.currentChat.isModelLoaded) {
+            // 使用當前選中的模型，如果沒有則使用第一個可選模型
+            var modelToLoad = root.currentModelInfo;
+            if (!modelToLoad || modelToLoad.filename === "") {
+                // 如果當前模型無效，嘗試獲取第一個可選模型
+                if (ModelList.selectableModels.count > 0) {
+                    var firstModelId = ModelList.selectableModels.get(0).id;
+                    modelToLoad = ModelList.modelInfo(firstModelId);
+                }
+            }
+            if (modelToLoad && modelToLoad.filename !== "") {
+                ChatListModel.currentChat.modelChangeRequested(modelToLoad);
+            }
+        }
+    }
 
     ConfirmationDialog {
         id: resetSystemMessageDialog
@@ -76,6 +94,14 @@ MySettingsTab {
                     if (i >= 0)
                         return i;
                     return 0;
+                }
+                onActivated: function(index) {
+                    // 當用戶選擇模型時，觸發模型加載
+                    var modelId = comboBox.currentValue;
+                    var modelInfo = ModelList.modelInfo(modelId);
+                    if (modelInfo && ChatListModel.currentChat) {
+                        ChatListModel.currentChat.modelChangeRequested(modelInfo);
+                    }
                 }
                 contentItem: Text {
                     leftPadding: 10

@@ -19,6 +19,7 @@
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QStringConverter>
 #include <QTextStream>
 #include <QTimer>
 #include <QMap>
@@ -1011,6 +1012,33 @@ bool Database::initDb(const QString &modelPath, const QList<CollectionItem> &old
     return true;
 }
 
+// 輔助函數：讀取完整文檔內容
+static QString readFullDocumentContent(const QString &filePath)
+{
+    QFileInfo fileInfo(filePath);
+    QString suffix = fileInfo.suffix().toLower();
+    
+    // 對於簡單的文本文件，直接讀取
+    if (suffix == "txt" || suffix == "md" || suffix == "markdown" || 
+        suffix == "json" || suffix == "xml" || suffix == "html" || 
+        suffix == "csv" || suffix == "log" || suffix == "code" ||
+        suffix == "cpp" || suffix == "h" || suffix == "hpp" || 
+        suffix == "c" || suffix == "py" || suffix == "js" || 
+        suffix == "ts" || suffix == "java" || suffix == "go" ||
+        suffix == "rs" || suffix == "rb" || suffix == "php") {
+        QFile file(filePath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream stream(&file);
+            stream.setEncoding(QStringConverter::Utf8);
+            return stream.readAll();
+        }
+    }
+    
+    // 對於其他格式（PDF, DOCX等），返回空字符串
+    // 注意：完整解析 PDF/DOCX 需要特殊的庫，這裡只處理文本文件
+    return QString();
+}
+
 Database::Database(int chunkSize, QStringList extensions)
     : QObject(nullptr)
     , m_chunkSize(chunkSize)
@@ -1096,11 +1124,15 @@ void Database::updateFolderToIndex(int folder_id, size_t countForFolder, bool se
         if (sendChunks && !m_chunkList.isEmpty())
             sendChunkList(); // send any remaining embedding chunks to llm
         item.indexing = false;
-        item.installed = true;
-
-        // Set the last update if we are done
-        if (item.startUpdate > item.lastUpdate && item.currentEmbeddingsToIndex == 0)
-            setLastUpdateTime(item);
+        // 只有在沒有 embedding 且沒有 LLM 調用時才設為 Ready
+        if (item.currentEmbeddingsToIndex == 0 && item.currentLLMCalls == 0) {
+            item.installed = true;
+            // Set the last update if we are done
+            if (item.startUpdate > item.lastUpdate)
+                setLastUpdateTime(item);
+        } else {
+            item.installed = false;
+        }
     }
     updateGuiForCollectionItem(item);
 }
@@ -1657,8 +1689,13 @@ void Database::handleEmbeddingsGenerated(const QVector<EmbeddingResult> &embeddi
 
         // Set the last update if we are done
         Q_ASSERT(item.startUpdate > item.lastUpdate);
-        if (!item.indexing && item.currentEmbeddingsToIndex == 0)
+        // 只有在沒有 embedding 且沒有 LLM 調用時才設為 Ready
+        if (!item.indexing && item.currentEmbeddingsToIndex == 0 && item.currentLLMCalls == 0) {
+            item.installed = true;
             setLastUpdateTime(item);
+        } else {
+            item.installed = false;
+        }
 
         updateGuiForCollectionItem(item);
     }
@@ -1876,7 +1913,21 @@ void Database::scanQueue()
         qWarning() << "error reading" << document_path;
         break;
     case ChunkStreamer::Status::DOC_COMPLETE:
-        ;
+        {
+            // 讀取文件的完整內容並發送給 LLM 處理
+            QString fullContent = readFullDocumentContent(document_path);
+            if (!fullContent.isEmpty()) {
+                // 通過 folder_id 獲取 collection name
+                CollectionItem item = guiCollectionItem(folder_id);
+                QString collectionName = item.collection;
+                if (!collectionName.isEmpty()) {
+                    emit requestProcessDocumentWithLLM(collectionName, fullContent);
+                } else {
+                    qWarning() << "LocalDocs: Cannot get collection name for folder_id" << folder_id;
+                }
+            }
+        }
+        break;
     }
 
 dequeue:
@@ -2031,6 +2082,47 @@ void Database::scheduleUncompletedEmbeddings()
             batch.append({ /*model*/ it->embedding_model, /*folder_id*/ it->folder_id, /*chunk_id*/ it->chunk_id, /*chunk*/ it->text });
         Q_ASSERT(!batch.isEmpty());
         m_embLLM->generateDocEmbeddingsAsync(batch);
+    }
+}
+
+void Database::incrementLLMCallCount(const QString &collection)
+{
+    QSqlQuery q(m_db);
+    QList<QPair<int, QString>> folders;
+    if (!selectFoldersFromCollection(q, collection, &folders))
+        return;
+    
+    // 更新該 collection 下所有 folder 的 LLM 調用計數
+    for (const auto &[folder_id, folder_path] : folders) {
+        if (!m_collectionMap.contains(folder_id))
+            continue;
+        CollectionItem item = guiCollectionItem(folder_id);
+        item.currentLLMCalls++;
+        updateGuiForCollectionItem(item);
+    }
+}
+
+void Database::decrementLLMCallCount(const QString &collection)
+{
+    QSqlQuery q(m_db);
+    QList<QPair<int, QString>> folders;
+    if (!selectFoldersFromCollection(q, collection, &folders))
+        return;
+    
+    // 更新該 collection 下所有 folder 的 LLM 調用計數
+    for (const auto &[folder_id, folder_path] : folders) {
+        if (!m_collectionMap.contains(folder_id))
+            continue;
+        CollectionItem item = guiCollectionItem(folder_id);
+        if (item.currentLLMCalls > 0)
+            item.currentLLMCalls--;
+        // 檢查是否可以設為 Ready
+        if (item.currentLLMCalls == 0 && item.currentEmbeddingsToIndex == 0 && !item.indexing) {
+            item.installed = true;
+            if (item.startUpdate > item.lastUpdate)
+                setLastUpdateTime(item);
+        }
+        updateGuiForCollectionItem(item);
     }
 }
 

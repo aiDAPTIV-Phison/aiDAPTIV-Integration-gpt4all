@@ -296,19 +296,9 @@ MySettingsTab {
             }
 
             MyTextField {
-                text: MySettings.localDocsRetrievalSize
-                validator: IntValidator {
-                    bottom: 1
-                }
-                onEditingFinished: {
-                    var val = parseInt(text)
-                    if (!isNaN(val)) {
-                        MySettings.localDocsRetrievalSize = val
-                        focus = false
-                    } else {
-                        text = MySettings.localDocsRetrievalSize
-                    }
-                }
+                text: "1"
+                readOnly: true
+                enabled: false
             }
         }
 

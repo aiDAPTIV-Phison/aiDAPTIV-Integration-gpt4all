@@ -154,6 +154,7 @@ struct CollectionItem {
     size_t totalBytesToIndex = 0;
     size_t currentEmbeddingsToIndex = 0;
     size_t totalEmbeddingsToIndex = 0;
+    int currentLLMCalls = 0;  // 正在進行的 LLM 調用數量
 
     // statistics
     size_t totalDocs = 0;
@@ -216,6 +217,8 @@ public Q_SLOTS:
     void retrieveFromDB(const QList<QString> &collections, const QString &text, int retrievalSize, QList<ResultInfo> *results);
     void changeChunkSize(int chunkSize);
     void changeFileExtensions(const QStringList &extensions);
+    void incrementLLMCallCount(const QString &collection);
+    void decrementLLMCallCount(const QString &collection);
 
 Q_SIGNALS:
     // Signals for the gui only
@@ -224,6 +227,8 @@ Q_SIGNALS:
     void requestRemoveGuiFolderById(const QString &collection, int folder_id);
     void requestGuiCollectionListUpdated(const QList<CollectionItem> &collectionList);
     void databaseValidChanged();
+    // Signal to process document with LLM (collection, fullContent)
+    void requestProcessDocumentWithLLM(const QString &collection, const QString &fullContent);
 
 private Q_SLOTS:
     void directoryChanged(const QString &path);

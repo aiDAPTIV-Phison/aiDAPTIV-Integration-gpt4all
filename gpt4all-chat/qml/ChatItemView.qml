@@ -322,11 +322,13 @@ GridLayout {
         }
     }
 
-    ColumnLayout {
+    Item {
         id: sourcesLayout
         Layout.row: 3
         Layout.column: 1
-        Layout.topMargin: 5
+        Layout.topMargin: 10  // 增加間距，讓分隔線位置更合適
+        Layout.fillWidth: true
+        Layout.preferredHeight: sourcesFlow.height
         visible: {
             if (consolidatedSources.length === 0)
                 return false
@@ -338,8 +340,7 @@ GridLayout {
             return true
         }
         clip: true
-        Layout.fillWidth: true
-        Layout.preferredHeight: 0
+        
         state: "collapsed"
         states: [
             State {
@@ -367,92 +368,95 @@ GridLayout {
 
         Flow {
             id: sourcesFlow
-            Layout.fillWidth: true
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
             spacing: 10
             visible: consolidatedSources.length !== 0
-            Repeater {
-                model: consolidatedSources
+                
+                Repeater {
+                    model: consolidatedSources
 
-                delegate: Rectangle {
-                    radius: 10
-                    color: ma.containsMouse ? theme.sourcesBackgroundHovered : theme.sourcesBackground
-                    width: 200
-                    height: 75
+                    delegate: Rectangle {
+                        radius: 10
+                        color: ma.containsMouse ? theme.sourcesBackgroundHovered : theme.sourcesBackground
+                        width: 200
+                        height: 75
 
-                    MouseArea {
-                        id: ma
-                        enabled: modelData.path !== ""
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: function() {
-                            Qt.openUrlExternally(modelData.fileUri)
-                        }
-                    }
-
-                    Rectangle {
-                        id: debugTooltip
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        width: 24
-                        height: 24
-                        color: "transparent"
-                        ToolTip {
-                            parent: debugTooltip
-                            visible: debugMouseArea.containsMouse
-                            text: modelData.text
-                            contentWidth: 900
-                            delay: 500
-                        }
                         MouseArea {
-                            id: debugMouseArea
+                            id: ma
+                            enabled: modelData.path !== ""
                             anchors.fill: parent
                             hoverEnabled: true
+                            onClicked: function() {
+                                Qt.openUrlExternally(modelData.fileUri)
+                            }
                         }
-                    }
 
-                    ColumnLayout {
-                        anchors.left: parent.left
-                        anchors.top: parent.top
-                        anchors.margins: 10
-                        spacing: 0
-                        RowLayout {
-                            id: title
-                            spacing: 5
-                            Layout.maximumWidth: 180
-                            MyFileIcon {
-                                iconSize: 24
-                                fileName: modelData.file
-                                Layout.preferredWidth: iconSize
-                                Layout.preferredHeight: iconSize
+                        Rectangle {
+                            id: debugTooltip
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            width: 24
+                            height: 24
+                            color: "transparent"
+                            ToolTip {
+                                parent: debugTooltip
+                                visible: debugMouseArea.containsMouse
+                                text: modelData.text
+                                contentWidth: 900
+                                delay: 500
+                            }
+                            MouseArea {
+                                id: debugMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                            }
+                        }
+
+                        ColumnLayout {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.margins: 10
+                            spacing: 0
+                            RowLayout {
+                                id: title
+                                spacing: 5
+                                Layout.maximumWidth: 180
+                                MyFileIcon {
+                                    iconSize: 24
+                                    fileName: modelData.file
+                                    Layout.preferredWidth: iconSize
+                                    Layout.preferredHeight: iconSize
+                                }
+                                Text {
+                                    Layout.maximumWidth: 156
+                                    text: modelData.collection !== "" ? modelData.collection : qsTr("LocalDocs")
+                                    font.pixelSize: theme.fontSizeLarge
+                                    font.bold: true
+                                    color: theme.styledTextColor
+                                    elide: Qt.ElideRight
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    color: "transparent"
+                                    height: 1
+                                }
                             }
                             Text {
-                                Layout.maximumWidth: 156
-                                text: modelData.collection !== "" ? modelData.collection : qsTr("LocalDocs")
-                                font.pixelSize: theme.fontSizeLarge
-                                font.bold: true
-                                color: theme.styledTextColor
+                                Layout.fillHeight: true
+                                Layout.maximumWidth: 180
+                                Layout.maximumHeight: 55 - title.height
+                                text: modelData.file
+                                color: theme.textColor
+                                font.pixelSize: theme.fontSizeSmall
                                 elide: Qt.ElideRight
+                                wrapMode: Text.WrapAnywhere
                             }
-                            Rectangle {
-                                Layout.fillWidth: true
-                                color: "transparent"
-                                height: 1
-                            }
-                        }
-                        Text {
-                            Layout.fillHeight: true
-                            Layout.maximumWidth: 180
-                            Layout.maximumHeight: 55 - title.height
-                            text: modelData.file
-                            color: theme.textColor
-                            font.pixelSize: theme.fontSizeSmall
-                            elide: Qt.ElideRight
-                            wrapMode: Text.WrapAnywhere
                         }
                     }
                 }
             }
-        }
     }
 
     ConfirmationDialog {

@@ -34,6 +34,7 @@ public Q_SLOTS:
     void handleChunkSizeChanged();
     void handleFileExtensionsChanged();
     void aboutToQuit();
+    void handleProcessDocumentWithLLM(const QString &collection, const QString &fullContent);
 
 Q_SIGNALS:
     void requestStart();
