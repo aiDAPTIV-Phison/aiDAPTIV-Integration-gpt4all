@@ -102,7 +102,7 @@ set(EXPORT_NAME QXlsxQt${QT_VERSION_MAJOR})
 
 cmake -B build -DLLMODEL_CUDA=OFF -DLLMODEL_KOMPUTE=OFF #configure environment
 cmake --build build --config Release #build
-
+windeployqt chat.exe --qmldir C:\Qt\6.10.1\msvc2022_64\qml # windeployqt should be at C:\Qt\6.10.1\msvc2022_64\bin，please set as PATH or direct using windeployqt.exe
 (4) The generated exe will be at gpt4all\gpt4all-chat\build\bin\chat.exe
 
 E. If files are modified
