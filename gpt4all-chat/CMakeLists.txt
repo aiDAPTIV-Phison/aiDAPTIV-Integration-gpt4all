@@ -570,6 +570,14 @@ elseif (CMAKE_SYSTEM_NAME MATCHES Windows)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-windows.cmake.in"
                    "${CMAKE_BINARY_DIR}/cmake/deploy-qt-windows.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-windows.cmake)
+    # Automatically deploy Qt DLLs after building on Windows
+    if(WINDEPLOYQT)
+        add_custom_command(TARGET chat POST_BUILD
+            COMMAND ${WINDEPLOYQT} --qmldir ${CMAKE_CURRENT_SOURCE_DIR} $<TARGET_FILE:chat>
+            COMMENT "Deploying Qt libraries for Windows..."
+            VERBATIM
+        )
+    endif()
 elseif (CMAKE_SYSTEM_NAME MATCHES Darwin)
     find_program(MACDEPLOYQT macdeployqt)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-mac.cmake.in"
