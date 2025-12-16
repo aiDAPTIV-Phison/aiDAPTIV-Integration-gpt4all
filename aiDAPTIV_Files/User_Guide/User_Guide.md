@@ -99,19 +99,55 @@ set(EXPORT_NAME QXlsxQt${QT_VERSION_MAJOR})
 ![image](img/fig_19.PNG)
 
 (3) Build
-
+```
 cmake -B build -DLLMODEL_CUDA=OFF -DLLMODEL_KOMPUTE=OFF #configure environment
 cmake --build build --config Release #build
-windeployqt chat.exe --qmldir C:\Qt\6.10.1\msvc2022_64\qml # windeployqt should be at C:\Qt\6.10.1\msvc2022_64\bin，please set as PATH or direct using windeployqt.exe
+windeployqt chat.exe --qmldir C:\Qt\6.10.1\msvc2022_64\qml 
+# windeployqt should be at C:\Qt\6.10.1\msvc2022_64\bin，please set as PATH or direct using windeployqt.exe
+```
 (4) The generated exe will be at gpt4all\gpt4all-chat\build\bin\chat.exe
 
-E. If files are modified
+**E. Download and Place Embedding Model (Required for LocalDocs)**
+
+The LocalDocs feature requires an embedding model to generate vector embeddings for your documents. You need to manually download and place the embedding model file.
+
+1. **Download the embedding model:**
+   - Download URL: https://gpt4all.io/models/gguf/nomic-embed-text-v1.5.f16.gguf
+   - File name: `nomic-embed-text-v1.5.f16.gguf`
+   - File size: ~274 MB
+
+2. **Place the embedding model file:**
+   - The embedding model must be placed in a `resources` folder that is **one level up** from where `chat.exe` is located.
+   - **If `chat.exe` is at:** `aiDAPTIV_Files\Installer\chat.exe`
+   - **Then place the model at:** `aiDAPTIV_Files\resources\nomic-embed-text-v1.5.f16.gguf`
+   
+   Directory structure example:
+   ```
+   aiDAPTIV_Files/
+   ├── Installer/
+   │   └── chat.exe          ← Your executable
+   └── resources/            ← Create this folder if it doesn't exist
+       └── nomic-embed-text-v1.5.f16.gguf  ← Place the model here
+   ```
+
+3. **Verify the setup:**
+   - After placing the model file, launch `chat.exe`
+   - If the model is correctly placed, LocalDocs will work without warnings
+   - If you see "Local embedding model not found" warning, check that:
+     - The `resources` folder exists at the correct location
+     - The file name is exactly `nomic-embed-text-v1.5.f16.gguf`
+     - The file is not corrupted (re-download if needed)
+
+**Note:** The embedding model is required for the LocalDocs feature to function. Without it, you will not be able to create collections or generate embeddings for your documents.
+
+F. If files are modified
 
 You can compile only the modified files
-
+```
 cd \gpt4all\gpt4all-chat\build
-cmake --build . --target <modified file name> --config Release #<modified file name> does not need to include file extension
 
+cmake --build . --target <modified file name> --config Release #<modified file name> does not need to include file extension
+```
 ---
 
 ## Chapter 2: How to Use?
@@ -120,6 +156,7 @@ cmake --build . --target <modified file name> --config Release #<modified file n
 
 1. **Initial Setup**
 - Click on `chat.exe` to launch the chat interface. The chat room automatically created. 
+- **Please double check the existent of embedding model, if not please check section E. (Download and Place Embedding Model)**
 ![image](img/fig_1.PNG)
 
 2. **Set LLM Endpoint**
